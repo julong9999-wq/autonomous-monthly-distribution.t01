@@ -7,9 +7,10 @@ import AIDiagnosis from './components/AIDiagnosis';
 import DividendAnnouncements from './components/DividendAnnouncements';
 import Navigation from './components/Navigation';
 import ETFDetail from './components/ETFDetail';
-import { Coins, RefreshCw } from 'lucide-react';
+import { Coins, RefreshCw, KeyRound, X, Check, ExternalLink } from 'lucide-react';
 import { calculateFee } from './constants';
 import { fetchLiveETFData } from './services/dataService';
+import { USER_KEY_STORAGE } from './services/geminiService';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('PERFORMANCE');
@@ -26,8 +27,32 @@ const App: React.FC = () => {
   const [globalEtfData, setGlobalEtfData] = useState<ETFData[]>([]);
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string>('');
-
   const [selectedEtf, setSelectedEtf] = useState<ETFData | null>(null);
+
+  // API Key Management State
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [hasUserKey, setHasUserKey] = useState(false);
+
+  // Check for existing key on mount
+  useEffect(() => {
+    const key = localStorage.getItem(USER_KEY_STORAGE);
+    if (key) {
+      setApiKeyInput(key);
+      setHasUserKey(true);
+    }
+  }, []);
+
+  const handleSaveKey = () => {
+    if (!apiKeyInput.trim()) {
+      localStorage.removeItem(USER_KEY_STORAGE);
+      setHasUserKey(false);
+    } else {
+      localStorage.setItem(USER_KEY_STORAGE, apiKeyInput.trim());
+      setHasUserKey(true);
+    }
+    setShowKeyModal(false);
+  };
 
   // Fetch Live Data (From CSV) on Mount
   useEffect(() => {
@@ -184,12 +209,24 @@ const App: React.FC = () => {
                 {lastUpdate && (
                   <span className="text-[9px] bg-blue-800/50 px-1 rounded text-blue-200 flex items-center gap-0.5">
                     <RefreshCw size={8} className={isUpdating ? "animate-spin" : ""} />
-                    資料日期: {lastUpdate}
+                    {lastUpdate}
                   </span>
                 )}
               </div>
             </div>
           </div>
+          
+          {/* API Key Settings Button */}
+          <button 
+            onClick={() => setShowKeyModal(true)}
+            className={`p-2 rounded-full transition-all active:scale-95 border ${
+              hasUserKey 
+                ? 'bg-white/10 border-white/20 text-accent hover:bg-white/20' 
+                : 'bg-accent border-accent text-primary animate-pulse hover:bg-accent/90'
+            }`}
+          >
+             <KeyRound size={20} strokeWidth={2.5} />
+          </button>
         </div>
       </header>
 
@@ -200,6 +237,59 @@ const App: React.FC = () => {
       {!selectedEtf && (
         <div className="flex-none z-30">
           <Navigation currentView={currentView} setView={handleSetView} />
+        </div>
+      )}
+
+      {/* API Key Modal */}
+      {showKeyModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowKeyModal(false)}>
+           <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                 <h3 className="font-black text-lg text-slate-800 flex items-center gap-2">
+                   <KeyRound size={20} className="text-primary"/> AI 金鑰設定
+                 </h3>
+                 <button onClick={() => setShowKeyModal(false)} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
+              </div>
+              
+              <div className="p-5 space-y-4">
+                 <p className="text-sm text-slate-600 leading-relaxed">
+                   本應用程式使用 Google Gemini API 進行智慧規劃與診斷。請輸入您自己的 API Key (免費申請)。
+                 </p>
+                 
+                 <div>
+                   <label className="block text-xs font-bold text-slate-500 uppercase mb-1.5 ml-1">API Key</label>
+                   <input 
+                     type="password" 
+                     value={apiKeyInput}
+                     onChange={(e) => setApiKeyInput(e.target.value)}
+                     placeholder="AIzaSy..."
+                     className="w-full border border-slate-200 bg-slate-50 rounded-xl p-3 text-slate-800 focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all font-mono text-sm"
+                   />
+                 </div>
+
+                 <a 
+                   href="https://aistudio.google.com/app/apikey" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+                 >
+                   <ExternalLink size={14}/> 前往 Google AI Studio 取得金鑰
+                 </a>
+
+                 <div className="pt-2">
+                    <button 
+                      onClick={handleSaveKey}
+                      className="w-full bg-primary text-white font-bold py-3.5 rounded-xl shadow-lg shadow-blue-500/30 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                    >
+                      <Check size={18} strokeWidth={3} />
+                      {apiKeyInput ? '儲存設定' : '清除設定'}
+                    </button>
+                    <p className="text-[10px] text-center text-slate-400 mt-3">
+                      * Key 僅儲存於您的瀏覽器中，不會上傳至伺服器。
+                    </p>
+                 </div>
+              </div>
+           </div>
         </div>
       )}
     </div>

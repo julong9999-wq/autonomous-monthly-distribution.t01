@@ -1,10 +1,21 @@
 import { GoogleGenAI } from "@google/genai";
 import { PortfolioItem, ETFData } from "../types";
 
+export const USER_KEY_STORAGE = "USER_GEMINI_KEY";
+
 const getAI = () => {
-  // 這裡的 process.env.API_KEY 會在 build time 被 Vite 替換成字串
-  if (!process.env.API_KEY) return null;
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // 1. 優先讀取使用者儲存在 LocalStorage 的 Key
+  const userKey = localStorage.getItem(USER_KEY_STORAGE);
+  if (userKey) {
+    return new GoogleGenAI({ apiKey: userKey });
+  }
+
+  // 2. 如果沒有使用者 Key，才嘗試使用系統預設 (可選，若您想完全禁用預設 Key，請移除此行)
+  if (process.env.API_KEY) {
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  }
+
+  return null;
 };
 
 const MODEL_FLASH = "gemini-3-flash-preview";
@@ -12,7 +23,7 @@ const MODEL_FLASH = "gemini-3-flash-preview";
 // Now accepts etfList explicitly
 export const generateSmartPlan = async (amount: number, promptText: string, etfList: ETFData[]): Promise<string> => {
   const ai = getAI();
-  if (!ai) return "⚠️ [系統提示] AI 功能尚未啟用。\n\n請在 Vercel 後台 > Settings > Environment Variables 新增 `API_KEY` 變數。";
+  if (!ai) return "⚠️ **未設定 API Key**\n\n為了使用 AI 功能，請點擊畫面右上角的「鑰匙圖示 🔑」，輸入您自己的 Google Gemini API Key。\n\n(這是不需付費的，您可以免費申請)";
 
   try {
     // Only filter ETFs that have valid price data to avoid recommending empty shells
@@ -32,15 +43,18 @@ export const generateSmartPlan = async (amount: number, promptText: string, etfL
       contents: prompt,
     });
     return response.text || "無法產生建議。";
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    return "AI 服務暫時無法使用，請檢查 API Key 是否正確或額度是否足夠。";
+    if (error.message?.includes('API_KEY_INVALID') || error.status === 400) {
+        return "⚠️ **API Key 無效**\n\n您輸入的 Key 似乎有誤，請點擊右上角鑰匙圖示重新設定。";
+    }
+    return "AI 服務暫時無法使用，請檢查您的網路連線。";
   }
 };
 
 export const generateDiagnosis = async (portfolio: PortfolioItem[]): Promise<string> => {
   const ai = getAI();
-  if (!ai) return "⚠️ [系統提示] 需要 API Key 才能進行深度診斷。\n\n請至 Vercel 設定環境變數。";
+  if (!ai) return "⚠️ **未設定 API Key**\n\n為了進行深度診斷，請點擊畫面右上角的「鑰匙圖示 🔑」設定您的 API Key。";
 
   try {
     const summary = portfolio.map(p => `${p.code} ${p.name}`).join(", ");
@@ -50,8 +64,11 @@ export const generateDiagnosis = async (portfolio: PortfolioItem[]): Promise<str
       contents: prompt,
     });
     return response.text || "無法產生診斷。";
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
+    if (error.message?.includes('API_KEY_INVALID') || error.status === 400) {
+        return "⚠️ **API Key 無效**\n\n您輸入的 Key 似乎有誤，請檢查設定。";
+    }
     return "AI 診斷服務暫時無法使用。";
   }
 };
