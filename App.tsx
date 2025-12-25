@@ -7,7 +7,7 @@ import AIDiagnosis from './components/AIDiagnosis';
 import DividendAnnouncements from './components/DividendAnnouncements';
 import Navigation from './components/Navigation';
 import ETFDetail from './components/ETFDetail';
-import { Coins, RefreshCw, KeyRound, X, Check, ExternalLink } from 'lucide-react';
+import { Coins, RefreshCw, KeyRound, X, Check, ExternalLink, CircleHelp, ShieldCheck, Zap, BookOpen } from 'lucide-react';
 import { calculateFee } from './constants';
 import { fetchLiveETFData } from './services/dataService';
 import { USER_KEY_STORAGE } from './services/geminiService';
@@ -31,6 +31,7 @@ const App: React.FC = () => {
 
   // API Key Management State
   const [showKeyModal, setShowKeyModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false); // New Help Modal State
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [hasUserKey, setHasUserKey] = useState(false);
 
@@ -216,17 +217,27 @@ const App: React.FC = () => {
             </div>
           </div>
           
-          {/* API Key Settings Button */}
-          <button 
-            onClick={() => setShowKeyModal(true)}
-            className={`p-2 rounded-full transition-all active:scale-95 border ${
-              hasUserKey 
-                ? 'bg-white/10 border-white/20 text-accent hover:bg-white/20' 
-                : 'bg-accent border-accent text-primary animate-pulse hover:bg-accent/90'
-            }`}
-          >
-             <KeyRound size={20} strokeWidth={2.5} />
-          </button>
+          <div className="flex items-center gap-2">
+             {/* Help Button */}
+            <button 
+              onClick={() => setShowHelpModal(true)}
+              className="p-2 rounded-full bg-white/10 border border-white/20 text-blue-100 hover:bg-white/20 active:scale-95 transition-all"
+            >
+               <CircleHelp size={20} strokeWidth={2.5} />
+            </button>
+
+            {/* API Key Settings Button */}
+            <button 
+              onClick={() => setShowKeyModal(true)}
+              className={`p-2 rounded-full transition-all active:scale-95 border ${
+                hasUserKey 
+                  ? 'bg-white/10 border-white/20 text-accent hover:bg-white/20' 
+                  : 'bg-accent border-accent text-primary animate-pulse hover:bg-accent/90'
+              }`}
+            >
+               <KeyRound size={20} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -237,6 +248,73 @@ const App: React.FC = () => {
       {!selectedEtf && (
         <div className="flex-none z-30">
           <Navigation currentView={currentView} setView={handleSetView} />
+        </div>
+      )}
+
+      {/* Help / Instructions Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in" onClick={() => setShowHelpModal(false)}>
+           <div className="bg-white rounded-2xl w-full max-w-sm max-h-[85vh] overflow-hidden shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="bg-slate-50 px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-none">
+                 <h3 className="font-black text-lg text-slate-800 flex items-center gap-2">
+                   <BookOpen size={20} className="text-primary"/> 使用說明書
+                 </h3>
+                 <button onClick={() => setShowHelpModal(false)} className="text-slate-400 hover:text-slate-600"><X size={24}/></button>
+              </div>
+
+              <div className="p-5 overflow-y-auto custom-scrollbar">
+                 <div className="space-y-6">
+                    {/* Section 1: API Key */}
+                    <div className="space-y-2">
+                       <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                          <div className="bg-accent/20 p-1.5 rounded-lg text-accent"><KeyRound size={16}/></div>
+                          為什麼需要 API Key?
+                       </h4>
+                       <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-100">
+                          本應用程式使用 Google 強大的 Gemini AI 來進行「智慧規劃」與「持股診斷」。為了啟用這些 AI 功能，Google 需要一把鑰匙 (API Key) 來驗證身份。
+                       </p>
+                    </div>
+
+                    <div className="space-y-2">
+                       <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                          <div className="bg-green-100 p-1.5 rounded-lg text-green-600"><Zap size={16}/></div>
+                          這需要付費嗎？
+                       </h4>
+                       <p className="text-sm text-slate-600 leading-relaxed">
+                          <span className="font-bold text-green-600">不用擔心，通常是免費的！</span> Google 提供個人開發者非常大方的免費額度，對於此類個人理財應用來說，基本上可以完全免費使用。
+                       </p>
+                    </div>
+
+                    <div className="space-y-2">
+                       <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                          <div className="bg-blue-100 p-1.5 rounded-lg text-blue-600"><ShieldCheck size={16}/></div>
+                          安全性說明
+                       </h4>
+                       <ul className="text-sm text-slate-600 space-y-2 list-disc pl-5">
+                          <li>您的金鑰僅儲存在<span className="font-bold text-slate-800">您的瀏覽器</span>中。</li>
+                          <li>除了直接傳送給 Google 伺服器進行運算外，不會傳送給任何第三方。</li>
+                          <li>您可以隨時在 Google AI Studio 撤銷該金鑰。</li>
+                       </ul>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100">
+                       <h4 className="font-bold text-slate-900 mb-3 mt-3">如何開始？</h4>
+                       <ol className="text-sm text-slate-600 space-y-3 list-decimal pl-5">
+                          <li>點擊 <a href="https://aistudio.google.com/app/apikey" target="_blank" className="text-primary font-bold hover:underline inline-flex items-center gap-0.5">取得金鑰 <ExternalLink size={12}/></a> (需登入 Google)。</li>
+                          <li>點擊「Create API key」建立新金鑰。</li>
+                          <li>回到本 APP，點擊右上角的 <span className="inline-block bg-accent text-white p-0.5 rounded"><KeyRound size={12}/></span> 圖示。</li>
+                          <li>貼上金鑰並儲存，即可解鎖 AI 功能！</li>
+                       </ol>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="p-4 border-t border-slate-100 bg-slate-50 flex-none">
+                 <button onClick={() => setShowHelpModal(false)} className="w-full bg-slate-200 text-slate-700 font-bold py-3 rounded-xl active:scale-95 transition-transform">
+                    我瞭解了
+                 </button>
+              </div>
+           </div>
         </div>
       )}
 
